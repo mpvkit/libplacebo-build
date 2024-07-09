@@ -25,7 +25,7 @@ enum Library: String, CaseIterable {
         case .vulkan:
             return "v1.2.9"
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
-            return "v2024.1"
+            return "2024.1.0"
         case .libplacebo:
             return "v7.349.0"
         }
@@ -40,7 +40,7 @@ enum Library: String, CaseIterable {
         case .vulkan:
             return "https://github.com/KhronosGroup/MoltenVK"
         case .libshaderc:
-            return "https://github.com/google/shaderc"
+            return "https://github.com/mpvkit/libshaderc-build/releases/download/\(self.version)/libshaderc-all.zip"
         case .libplacebo:
             return "https://github.com/haasn/libplacebo"
         }
@@ -64,16 +64,17 @@ private class BuildPlacebo: BaseBuild {
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var args = [
-            "-Dvulkan=enable", 
-            "-Dshaderc=enable", 
-            "-Dglslang=enable", 
-            "-Dlcms=enable", 
+            "-Dvulkan=enabled", 
+            "-Dshaderc=enabled", 
+            // "-Dglslang=enabled",
+            "-Dlcms=enabled", 
             
             "-Dxxhash=disabled", 
             "-Dunwind=disabled", 
             "-Dglslang=disabled",
-             "-Dd3d11=disabled",
-             "-Ddemos=false"
+            "-Dd3d11=disabled",
+            "-Ddemos=false",
+            "-Dtests=false",
         ]
 
         let path = URL.currentDirectory + [Library.libdovi.rawValue, platform.rawValue, "thin", arch.rawValue]
@@ -83,6 +84,10 @@ private class BuildPlacebo: BaseBuild {
             args += ["-Ddovi=disabled", "-Dlibdovi=disabled"]
         }
         return args
+    }
+
+    override func flagsDependencelibrarys() -> [Library] {
+        [.libdovi]
     }
 }
 
@@ -96,6 +101,12 @@ private class BuildLittleCms: BaseBuild {
 private class BuildDovi: ZipBaseBuild {
     init() throws {
         super.init(library: .libdovi)
+    }
+}
+
+private class BuildShaderc: ZipBaseBuild {
+    init() throws {
+        super.init(library: .libshaderc)
     }
 }
 
@@ -177,74 +188,4 @@ private class BuildVulkan: BaseBuild {
             }
         }
     }
-}
-
-
-
-private class BuildShaderc: BaseBuild {
-    init() {
-        super.init(library: .libshaderc)
-        try! Utility.launch(executableURL: directoryURL + "/utils/git-sync-deps", arguments: [], currentDirectoryURL: directoryURL)
-        var path = directoryURL + "third_party/spirv-tools/tools/reduce/reduce.cpp"
-        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-            str = str.replacingOccurrences(of: """
-              int res = std::system(nullptr);
-              return res != 0;
-            """, with: """
-              FILE* fp = popen(nullptr, "r");
-              return fp == NULL;
-            """)
-            str = str.replacingOccurrences(of: """
-              int status = std::system(command.c_str());
-            """, with: """
-              FILE* fp = popen(command.c_str(), "r");
-            """)
-            str = str.replacingOccurrences(of: """
-              return status == 0;
-            """, with: """
-              return fp != NULL;
-            """)
-            try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        }
-        path = directoryURL + "third_party/spirv-tools/tools/fuzz/fuzz.cpp"
-        if let data = FileManager.default.contents(atPath: path.path), var str = String(data: data, encoding: .utf8) {
-            str = str.replacingOccurrences(of: """
-              int res = std::system(nullptr);
-              return res != 0;
-            """, with: """
-              FILE* fp = popen(nullptr, "r");
-              return fp == NULL;
-            """)
-            str = str.replacingOccurrences(of: """
-              int status = std::system(command.c_str());
-            """, with: """
-              FILE* fp = popen(command.c_str(), "r");
-            """)
-            str = str.replacingOccurrences(of: """
-              return status == 0;
-            """, with: """
-              return fp != NULL;
-            """)
-            try! str.write(toFile: path.path, atomically: true, encoding: .utf8)
-        }
-    }
-
-    override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
-        [
-            "-DSHADERC_SKIP_TESTS=ON",
-            "-DSHADERC_SKIP_EXAMPLES=ON",
-            "-DSHADERC_SKIP_COPYRIGHT_CHECK=ON",
-            "-DENABLE_EXCEPTIONS=ON",
-            "-DENABLE_CTEST=OFF",
-            "-DENABLE_GLSLANG_BINARIES=OFF",
-            "-DSPIRV_SKIP_EXECUTABLES=ON",
-            "-DSPIRV_TOOLS_BUILD_STATIC=ON",
-            "-DBUILD_SHARED_LIBS=OFF",
-        ]
-    }
-
-    override func frameworks() throws -> [String] {
-        ["libshaderc_combined"]
-    }
-    
 }
