@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        default: '0.0.0'
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        brew install autoconf
+        brew install automake
+        brew install libtool
+
+    - name: Build
+      run: |
+        swift run --package-path scripts build enable-split-platform
+    
+    - name: Update Package.swift
+      run: |
+        rm -f ./Package.swift
+        cp -f ./docs/Package.template.swift ./Package.swift
+
+        Libplacebo_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libplacebo.xcframework.zip"
+        Libplacebo_checksum=$(cat ./dist/release/Libplacebo.xcframework.checksum.txt)
+        sed -i '' "s#\\\(Libplacebo_url)#${Libplacebo_url}#g" ./Package.swift
+        sed -i '' "s#\\\(Libplacebo_checksum)#${Libplacebo_checksum}#g" ./Package.swift
+
+        Libshaderc_combined_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libshaderc_combined.xcframework.zip"
+        Libshaderc_combined_checksum=$(cat ./dist/release/Libshaderc_combined.xcframework.checksum.txt)
+        sed -i '' "s#\\\(Libshaderc_combined_url)#${Libshaderc_combined_url}#g" ./Package.swift
+        sed -i '' "s#\\\(Libshaderc_combined_checksum)#${Libshaderc_combined_checksum}#g" ./Package.swift
+
+        MoltenVK_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/MoltenVK.xcframework.zip"
+        MoltenVK_checksum=$(cat ./dist/release/MoltenVK.xcframework.checksum.txt)
+        sed -i '' "s#\\\(MoltenVK_url)#${MoltenVK_url}#g" ./Package.swift
+        sed -i '' "s#\\\(MoltenVK_checksum)#${MoltenVK_checksum}#g" ./Package.swift
+
+        Libdovi_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libdovi.xcframework.zip"
+        Libdovi_checksum=$(cat ./dist/release/Libdovi.xcframework.checksum.txt)
+        sed -i '' "s#\\\(Libdovi_url)#${Libdovi_url}#g" ./Package.swift
+        sed -i '' "s#\\\(Libdovi_checksum)#${Libdovi_checksum}#g" ./Package.swift
+
+        lcms2_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/lcms2.xcframework.zip"
+        lcms2_checksum=$(cat ./dist/release/lcms2.xcframework.checksum.txt)
+        sed -i '' "s#\\\(lcms2_url)#${lcms2_url}#g" ./Package.swift
+        sed -i '' "s#\\\(lcms2_checksum)#${lcms2_checksum}#g" ./Package.swift
+
+    - name: Push Package.swift
+      uses: EndBug/add-and-commit@v9
+      with:
+        default_author: github_actions
+        add: |
+          - Package.swift
+          - Sources
+        message: "chore: release version ${{ github.event.inputs.version }}"
+        push: "origin HEAD:${{ github.ref_name }}"
+        
+    - name: Upload binary to GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: ${{ github.event.inputs.version }}
+        tag_name: ${{ github.event.inputs.version }}
+        files: |
+          ./dist/release/*.txt
+          ./dist/release/*.zip
+        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        fail_on_unmatched_files: true
