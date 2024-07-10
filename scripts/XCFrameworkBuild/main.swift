@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 do {
     try Build.performCommand(arguments: Array(CommandLine.arguments.dropFirst()))
@@ -23,7 +24,7 @@ enum Library: String, CaseIterable {
         case .libdovi:
             return "v3.3.0"
         case .vulkan:
-            return "v1.2.9"
+            return "1.2.9"
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
             return "2024.1.0"
         case .libplacebo:
@@ -36,9 +37,9 @@ enum Library: String, CaseIterable {
         case .lcms2:
             return "https://github.com/mm2/Little-CMS"
         case .libdovi:
-            return "https://github.com/cxfksword/libdovi-build/releases/download/\(self.version)/libdovi-all.zip"
+            return "https://github.com/mpvkit/libdovi-build/releases/download/\(self.version)/libdovi-all.zip"
         case .vulkan:
-            return "https://github.com/KhronosGroup/MoltenVK"
+            return "https://github.com/mpvkit/moltenvk-build/releases/download/\(self.version)/MoltenVK-all.zip"
         case .libshaderc:
             return "https://github.com/mpvkit/libshaderc-build/releases/download/\(self.version)/libshaderc-all.zip"
         case .libplacebo:
@@ -64,9 +65,9 @@ private class BuildPlacebo: BaseBuild {
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var args = [
+            "-Dopengl=enabled", 
             "-Dvulkan=enabled", 
-            "-Dshaderc=enabled", 
-            // "-Dglslang=enabled",
+            "-Dshaderc=enabled",
             "-Dlcms=enabled", 
             
             "-Dxxhash=disabled", 
@@ -115,76 +116,39 @@ private class BuildShaderc: ZipBaseBuild {
 private class BuildVulkan: BaseBuild {
     init() {
         super.init(library: .vulkan)
-
-        // // switch to main branch, to pull newest code
-        // try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "main"], currentDirectoryURL: directoryURL)
-        // try! Utility.launch(path: "/usr/bin/git", arguments: ["fetch", "origin", "main:main"], currentDirectoryURL: directoryURL)
-        // try! Utility.launch(path: "/usr/bin/git", arguments: ["checkout", "main"], currentDirectoryURL: directoryURL)
     }
 
     override func buildALL() throws {
-        // // build from source code
-        // let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-        // var arguments = platforms().map {
-        //     "--\($0.name)"
-        // }
-        // try Utility.launch(path: (directoryURL + "fetchDependencies").path, arguments: arguments, currentDirectoryURL: directoryURL)
-        // arguments = platforms().map(\.name)
-        // try Utility.launch(path: "/usr/bin/make", arguments: arguments, currentDirectoryURL: directoryURL)
-        // try? FileManager.default.removeItem(at: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
-        // try? FileManager.default.copyItem(at: directoryURL + "Package/Release/MoltenVK/MoltenVK.xcframework", to: URL.currentDirectory + "../Sources/MoltenVK.xcframework")
+        try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
+        try? FileManager.default.removeItem(at: directoryURL.appendingPathExtension("log"))
+        try? FileManager.default.createDirectory(atPath: (URL.currentDirectory + library.rawValue).path, withIntermediateDirectories: true, attributes: nil)
+        for platform in BaseBuild.platforms {
+            for arch in architectures(platform) {
+                // restore lib
+                let srcThinLibPath = directoryURL + ["lib", "MoltenVK.xcframework", platform.frameworkName]
+                let destThinPath = thinDir(platform: platform, arch: arch)
+                let destThinLibPath = destThinPath + ["lib"]
+                try? FileManager.default.createDirectory(atPath: destThinPath.path, withIntermediateDirectories: true, attributes: nil)
+                try? FileManager.default.copyItem(at: srcThinLibPath, to: destThinLibPath)
 
-        // compile is very slow, change to use github action build xciframework
-        let version = self.library.version.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
-        let downloadUrl = "https://github.com/KhronosGroup/MoltenVK/releases/download/v\(version)/MoltenVK-all.tar"
-        let packageURL = directoryURL + "Package/"
-        let releaseURL = packageURL + "Release/"
-        try? FileManager.default.removeItem(at: releaseURL)
-        try? FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
-        Utility.shell("wget \(downloadUrl) -q -O MoltenVK-all.tar", currentDirectoryURL: packageURL)
-        Utility.shell("tar xvf MoltenVK-all.tar", currentDirectoryURL: packageURL)
-        try? FileManager.default.moveItem(at: packageURL + "MoltenVK", to: releaseURL)
-        let oldXcframework = URL.currentDirectory + "../Sources/MoltenVK.xcframework"
-        let newXcframework = releaseURL + "MoltenVK/static/MoltenVK.xcframework"
-        if FileManager.default.fileExists(atPath: newXcframework.path) {
-            try? FileManager.default.removeItem(at: oldXcframework)
-            try? FileManager.default.copyItem(at: newXcframework, to: oldXcframework)
-        } else {
-            throw NSError(domain: "xcframework not found", code: -1)
-        }
+                // restore include
+                let srcIncludePath = directoryURL + ["include"]
+                let destIncludePath = destThinPath + ["include"]
+                try? FileManager.default.copyItem(at: srcIncludePath, to: destIncludePath)
 
-        for platform in platforms() {
-            var frameworks = ["CoreFoundation", "CoreGraphics", "Foundation", "IOSurface", "Metal", "QuartzCore"]
-            if platform == .macos {
-                frameworks.append("Cocoa")
-            } 
-            if platform != .macos {
-                frameworks.append("UIKit")
-            }
-            if !(platform == .tvos || platform == .tvsimulator) {
-                frameworks.append("IOKit")
-            }
-            let libframework = frameworks.map {
-                "-framework \($0)"
-            }.joined(separator: " ")
-            for arch in platform.architectures {
-                let prefix = thinDir(platform: platform, arch: arch) + "/lib/pkgconfig"
-                try? FileManager.default.removeItem(at: prefix)
-                try? FileManager.default.createDirectory(at: prefix, withIntermediateDirectories: true, attributes: nil)
-                let vulkanPC = prefix + "vulkan.pc"
+                // restore pkgconfig
+                let srcPkgConfigPath = directoryURL + ["pkgconfig-example"]
+                let destPkgConfigPath = destThinPath + ["lib", "pkgconfig"]
+                try? FileManager.default.copyItem(at: srcPkgConfigPath, to: destPkgConfigPath)
 
-                let content = """
-                prefix=\((directoryURL + "Package/Release/MoltenVK").path)
-                includedir=${prefix}/include
-                libdir=${prefix}/static/MoltenVK.xcframework/\(platform.frameworkName)
-
-                Name: Vulkan-Loader
-                Description: Vulkan Loader
-                Version: \(version)
-                Libs: -L${libdir} -lMoltenVK \(libframework)
-                Cflags: -I${includedir}
-                """
-                FileManager.default.createFile(atPath: vulkanPC.path, contents: content.data(using: .utf8), attributes: nil)
+                // update pkgconfig prefix
+                Utility.listAllFiles(in: destPkgConfigPath).forEach { file in
+                    if let data = FileManager.default.contents(atPath: file.path), var str = String(data: data, encoding: .utf8) {
+                        str = str.replacingOccurrences(of: "/path/to/workdir", with: URL.currentDirectory.path)
+                        str = str.replacingOccurrences(of: "/path/to/thin/platform", with:  "/\(platform.rawValue)/thin/\(arch.rawValue)")
+                        try! str.write(toFile: file.path, atomically: true, encoding: .utf8)
+                    }
+                }
             }
         }
     }

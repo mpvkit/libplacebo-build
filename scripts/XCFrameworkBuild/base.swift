@@ -62,17 +62,17 @@ class BaseBuild {
         self.library = library
         directoryURL = URL.currentDirectory + "\(library.rawValue)-\(library.version)"
 
-        // unzip builded static library
         if library.url.hasSuffix(".zip") {
+             // unzip builded static library
             try? FileManager.default.removeItem(atPath: directoryURL.path)
             try! FileManager.default.createDirectory(atPath: directoryURL.path, withIntermediateDirectories: true, attributes: nil)
 
             let outputFileName = "\(library.rawValue).zip"
-            try! Utility.launch(executableName: "wget", arguments: ["-O", outputFileName, library.url], currentDirectoryURL: directoryURL)
+            try! Utility.launch(path: "wget", arguments: ["-O", outputFileName, library.url], currentDirectoryURL: directoryURL)
             try! Utility.launch(path: "/usr/bin/unzip", arguments: [outputFileName], currentDirectoryURL: directoryURL)
             try? FileManager.default.removeItem(at: directoryURL + [outputFileName])
         } else if !FileManager.default.fileExists(atPath: directoryURL.path) {
-            // pull code
+            // pull code from git
             try! Utility.launch(path: "/usr/bin/git", arguments: ["-c", "advice.detachedHead=false", "clone", "--depth", "1", "--branch", library.version, library.url, directoryURL.path])
 
             // apply patch
@@ -486,7 +486,7 @@ class BaseBuild {
         return crossFile
     }
 
-    private func packageRelease() throws {
+    func packageRelease() throws {
         let releaseDirPath = URL.currentDirectory + ["release"]
         if !FileManager.default.fileExists(atPath: releaseDirPath.path) {
             try? FileManager.default.createDirectory(at: releaseDirPath, withIntermediateDirectories: true, attributes: nil)
@@ -885,13 +885,12 @@ enum Utility {
 
     @discardableResult
     static func launch(path: String, arguments: [String], isOutput: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) throws -> String {
-        try launch(executableURL: URL(fileURLWithPath: path), arguments: arguments, isOutput: isOutput, currentDirectoryURL: currentDirectoryURL, environment: environment)
-    }
-
-    @discardableResult
-    static func launch(executableName: String, arguments: [String], isOutput: Bool = false, currentDirectoryURL: URL? = nil, environment: [String: String] = [:]) throws -> String {
-        let executableURL = Utility.shell("which \(executableName)", isOutput: true)!
-        return try launch(executableURL: URL(fileURLWithPath: executableURL), arguments: arguments, isOutput: isOutput, currentDirectoryURL: currentDirectoryURL, environment: environment)
+        if !path.hasPrefix("/") {
+            let execPath = Utility.shell("which \(path)", isOutput: true)!
+            return try launch(executableURL: URL(fileURLWithPath: execPath), arguments: arguments, isOutput: isOutput, currentDirectoryURL: currentDirectoryURL, environment: environment)
+        } else {
+            return try launch(executableURL: URL(fileURLWithPath: path), arguments: arguments, isOutput: isOutput, currentDirectoryURL: currentDirectoryURL, environment: environment)
+        }
     }
 
     @discardableResult

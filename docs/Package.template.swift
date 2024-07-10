@@ -7,8 +7,12 @@ let package = Package(
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13)],
     products: [
         .library(
-            name: "libplacebo", 
-            targets: ["Libplacebo", "Libshaderc_combined", "MoltenVK", "Libdovi", "lcms2"]
+            name: "Libplacebo", 
+            targets: ["Libplacebo"]
+        ),
+        .library(
+            name: "lcms2", 
+            targets: ["lcms2"]
         ),
     ],
     targets: [
@@ -16,21 +20,6 @@ let package = Package(
             name: "Libplacebo",
             url: "\(Libplacebo_url)",
             checksum: "\(Libplacebo_checksum)"
-        ),
-        .binaryTarget(
-            name: "Libshaderc_combined",
-            url: "\(Libshaderc_combined_url)",
-            checksum: "\(Libshaderc_combined_checksum)"
-        ),
-        .binaryTarget(
-            name: "MoltenVK",
-            url: "\(MoltenVK_url)",
-            checksum: "\(MoltenVK_checksum)"
-        ),
-        .binaryTarget(
-            name: "Libdovi",
-            url: "\(Libdovi_url)",
-            checksum: "\(Libdovi_checksum)"
         ),
         .binaryTarget(
             name: "lcms2",

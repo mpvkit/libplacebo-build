@@ -6,7 +6,7 @@ on:
       version:
         description: 'Version to release'
         required: true
-        default: '0.0.0'
+        default: '7.349.0'
 
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
 
     - name: Build
       run: |
-        swift run --package-path scripts build enable-split-platform
+        swift run --package-path scripts build
     
     - name: Update Package.swift
       run: |
@@ -35,21 +35,6 @@ jobs:
         Libplacebo_checksum=$(cat ./dist/release/Libplacebo.xcframework.checksum.txt)
         sed -i '' "s#\\\(Libplacebo_url)#${Libplacebo_url}#g" ./Package.swift
         sed -i '' "s#\\\(Libplacebo_checksum)#${Libplacebo_checksum}#g" ./Package.swift
-
-        Libshaderc_combined_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libshaderc_combined.xcframework.zip"
-        Libshaderc_combined_checksum=$(cat ./dist/release/Libshaderc_combined.xcframework.checksum.txt)
-        sed -i '' "s#\\\(Libshaderc_combined_url)#${Libshaderc_combined_url}#g" ./Package.swift
-        sed -i '' "s#\\\(Libshaderc_combined_checksum)#${Libshaderc_combined_checksum}#g" ./Package.swift
-
-        MoltenVK_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/MoltenVK.xcframework.zip"
-        MoltenVK_checksum=$(cat ./dist/release/MoltenVK.xcframework.checksum.txt)
-        sed -i '' "s#\\\(MoltenVK_url)#${MoltenVK_url}#g" ./Package.swift
-        sed -i '' "s#\\\(MoltenVK_checksum)#${MoltenVK_checksum}#g" ./Package.swift
-
-        Libdovi_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libdovi.xcframework.zip"
-        Libdovi_checksum=$(cat ./dist/release/Libdovi.xcframework.checksum.txt)
-        sed -i '' "s#\\\(Libdovi_url)#${Libdovi_url}#g" ./Package.swift
-        sed -i '' "s#\\\(Libdovi_checksum)#${Libdovi_checksum}#g" ./Package.swift
 
         lcms2_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/lcms2.xcframework.zip"
         lcms2_checksum=$(cat ./dist/release/lcms2.xcframework.checksum.txt)
