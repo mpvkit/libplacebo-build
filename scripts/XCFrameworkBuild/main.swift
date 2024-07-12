@@ -9,6 +9,7 @@ do {
     try BuildDovi().buildALL()
     try BuildShaderc().buildALL()
     try BuildVulkan().buildALL()
+    try BuildSpirvCross().buildALL()
     try BuildPlacebo().buildALL()
 } catch {
     print(error.localizedDescription)
@@ -17,7 +18,7 @@ do {
 
 
 enum Library: String, CaseIterable {
-    case libshaderc, vulkan, lcms2, libdovi, libplacebo
+    case libshaderc, vulkan, lcms2, libdovi, spirvcross, libplacebo
     var version: String {
         switch self {
         case .lcms2:
@@ -28,6 +29,8 @@ enum Library: String, CaseIterable {
             return "1.2.9"
         case .libshaderc:  // compiling GLSL (OpenGL Shading Language) shaders into SPIR-V (Standard Portable Intermediate Representation - Vulkan) code
             return "2024.1.0"
+        case .spirvcross:  // parsing and converting SPIR-V to other shader languages.
+            return "vulkan-sdk-1.3.268.0"
         case .libplacebo:
             return "v7.349.0"
         }
@@ -43,6 +46,8 @@ enum Library: String, CaseIterable {
             return "https://github.com/mpvkit/moltenvk-build/releases/download/\(self.version)/MoltenVK-all.zip"
         case .libshaderc:
             return "https://github.com/mpvkit/libshaderc-build/releases/download/\(self.version)/libshaderc-all.zip"
+        case .spirvcross:
+            return "https://github.com/KhronosGroup/SPIRV-Cross"
         case .libplacebo:
             return "https://github.com/haasn/libplacebo"
         }
@@ -94,6 +99,55 @@ private class BuildPlacebo: BaseBuild {
 }
 
 
+private class BuildSpirvCross: BaseBuild {
+    init() {
+        super.init(library: .spirvcross)
+    }
+
+
+    override func build(platform: PlatformType, arch: ArchType) throws {
+        try super.build(platform: platform, arch: arch)
+
+        let prefix = thinDir(platform: platform, arch: arch)
+        let version = self.library.version.replacingOccurrences(of: "vulkan-sdk-", with: "").replacingOccurrences(of: "sdk-", with: "")
+        let pcDir = prefix + "/lib/pkgconfig"
+        try? FileManager.default.removeItem(at: pcDir)
+        try? FileManager.default.createDirectory(at: pcDir, withIntermediateDirectories: true, attributes: nil)
+        let pc = pcDir + "spirv-cross-c-shared.pc"
+
+        let content = """
+        prefix=\(prefix.path)
+        exec_prefix=${prefix}
+        includedir=${prefix}/include/spirv_cross
+        libdir=${prefix}/lib
+
+        Name: spirv-cross-c-shared
+        Description: C API for SPIRV-Cross
+        Version: \(version)
+        Libs: -L${libdir} -lspirv-cross-c -lspirv-cross-glsl -lspirv-cross-hlsl -lspirv-cross-reflect -lspirv-cross-msl -lspirv-cross-util -lspirv-cross-core -lstdc++
+        Cflags: -I${includedir}
+        """
+        FileManager.default.createFile(atPath: pc.path, contents: content.data(using: .utf8), attributes: nil)
+    }
+
+    override func arguments(platform _: PlatformType, arch _: ArchType) -> [String] {
+        [
+            "-DSPIRV_CROSS_SHARED=OFF",
+            "-DSPIRV_CROSS_STATIC=ON", 
+            "-DSPIRV_CROSS_CLI=OFF", 
+            "-DSPIRV_CROSS_ENABLE_TESTS=OFF",
+            "-DSPIRV_CROSS_FORCE_PIC=ON", 
+            "-Ddemos=false-DSPIRV_CROSS_ENABLE_CPP=OFF"
+        ]
+    }
+
+    override func frameworks() throws -> [String] {
+        // ignore generate xci framework
+        return []
+    }
+}
+
+
 private class BuildLittleCms: BaseBuild {
     init() {
         super.init(library: .lcms2)
@@ -113,8 +167,7 @@ private class BuildShaderc: ZipBaseBuild {
 }
 
 
-
-private class BuildVulkan: BaseBuild {
+private class BuildVulkan: ZipBaseBuild {
     init() {
         super.init(library: .vulkan)
     }
@@ -138,15 +191,12 @@ private class BuildVulkan: BaseBuild {
                 try? FileManager.default.copyItem(at: srcIncludePath, to: destIncludePath)
 
                 // restore pkgconfig
-                let srcPkgConfigPath = directoryURL + ["pkgconfig-example"]
+                let srcPkgConfigPath = directoryURL + ["pkgconfig-example", platform.rawValue, arch.rawValue]
                 let destPkgConfigPath = destThinPath + ["lib", "pkgconfig"]
                 try? FileManager.default.copyItem(at: srcPkgConfigPath, to: destPkgConfigPath)
-
-                // update pkgconfig prefix
                 Utility.listAllFiles(in: destPkgConfigPath).forEach { file in
                     if let data = FileManager.default.contents(atPath: file.path), var str = String(data: data, encoding: .utf8) {
                         str = str.replacingOccurrences(of: "/path/to/workdir", with: URL.currentDirectory.path)
-                        str = str.replacingOccurrences(of: "/path/to/thin/platform", with:  "/\(platform.rawValue)/thin/\(arch.rawValue)")
                         try! str.write(toFile: file.path, atomically: true, encoding: .utf8)
                     }
                 }
