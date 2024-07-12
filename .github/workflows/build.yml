@@ -24,7 +24,7 @@ jobs:
 
     - name: Build
       run: |
-        swift run --package-path scripts build
+        make build
     
     - name: Update Package.swift
       run: |
