@@ -19,12 +19,12 @@ let package = Package(
         .binaryTarget(
             name: "Libplacebo",
             url: "https://github.com/mpvkit/libplacebo-build/releases/download/7.349.0/Libplacebo.xcframework.zip",
-            checksum: "0b3675d6ee7b763461a2513f47ad020fd01883625ff0c18f885ed6866a0ea265"
+            checksum: "1d7b374bb714b082a6c9aa678c7eee97301e0f1ca935706a43d40a868c250cb0"
         ),
         .binaryTarget(
             name: "lcms2",
             url: "https://github.com/mpvkit/libplacebo-build/releases/download/7.349.0/lcms2.xcframework.zip",
-            checksum: "92c1ba6965697a72fec68d3d019dfd22b70daa67def2f845303715315e30a349"
+            checksum: "0f86ed24779fc1bfa990407a7250f4000c5ab5233864107d8e4112e19fdd6211"
         )
     ]
 )
