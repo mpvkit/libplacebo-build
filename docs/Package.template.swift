@@ -16,7 +16,7 @@ let package = Package(
         // https://github.com/apple/swift-package-manager/issues/6069
         .target(
             name: "_Libplacebo",
-            dependencies: ["lcms2", "Libdovi", "MoltenVK", "Libshaderc", "Libplacebo"],
+            dependencies: ["lcms2", "Libdovi", "MoltenVK", "Libshaderc_combined", "Libplacebo"],
             path: "Sources/_Dummy"
         ),
         //AUTO_GENERATE_TARGETS_BEGIN//
