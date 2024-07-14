@@ -8,23 +8,18 @@ let package = Package(
     products: [
         .library(
             name: "Libplacebo", 
-            targets: ["Libplacebo"]
-        ),
-        .library(
-            name: "lcms2", 
-            targets: ["lcms2"]
+            targets: ["_Libplacebo"]
         ),
     ],
     targets: [
-        .binaryTarget(
-            name: "Libplacebo",
-            url: "\(Libplacebo_url)",
-            checksum: "\(Libplacebo_checksum)"
+        // Need a dummy target to embedded correctly.
+        // https://github.com/apple/swift-package-manager/issues/6069
+        .target(
+            name: "_Libplacebo",
+            dependencies: ["lcms2", "Libdovi", "MoltenVK", "Libshaderc", "Libplacebo"],
+            path: "Sources/_Dummy"
         ),
-        .binaryTarget(
-            name: "lcms2",
-            url: "\(lcms2_url)",
-            checksum: "\(lcms2_checksum)"
-        )
+        //AUTO_GENERATE_TARGETS_BEGIN//
+        //AUTO_GENERATE_TARGETS_END//
     ]
 )

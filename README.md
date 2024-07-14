@@ -14,7 +14,7 @@ https://github.com/mpvkit/libplacebo-build.git
 
 ```bash
 make build
-# or only build specified platforms
+# or build specified platforms
 make build platform=ios,macos
 # or see help
 make help

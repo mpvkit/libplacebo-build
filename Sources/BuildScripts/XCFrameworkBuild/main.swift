@@ -52,6 +52,55 @@ enum Library: String, CaseIterable {
             return "https://github.com/haasn/libplacebo"
         }
     }
+
+
+    // for generate Package.swift
+    var targets : [PackageTarget] {
+        switch self {
+        case .lcms2:
+            return  [
+                .target(
+                    name: "lcms2",
+                    url: "https://github.com/mpvkit/libplacebo-build/releases/download/\(BaseBuild.options.releaseVersion)/lcms2.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libplacebo-build/releases/download/\(BaseBuild.options.releaseVersion)/lcms2.xcframework.checksum.txt"
+                ),
+            ]
+        case .libdovi:
+            return  [
+                .target(
+                    name: "Libdovi",
+                    url: "https://github.com/mpvkit/libdovi-build/releases/download/\(self.version)/Libdovi.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libdovi-build/releases/download/\(self.version)/Libdovi.xcframework.checksum.txt"
+                ),
+            ]
+        case .vulkan:
+            return  [
+                .target(
+                    name: "MoltenVK",
+                    url: "https://github.com/mpvkit/moltenvk-build/releases/download/\(self.version)/MoltenVK.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/moltenvk-build/releases/download/\(self.version)/MoltenVK.xcframework.checksum.txt"
+                ),
+            ]
+        case .libshaderc:
+            return  [
+                .target(
+                    name: "Libshaderc",
+                    url: "https://github.com/mpvkit/libshaderc-build/releases/download/\(self.version)/Libshaderc.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libshaderc-build/releases/download/\(self.version)/Libshaderc.xcframework.checksum.txt"
+                ),
+            ]
+        case .libplacebo:
+            return  [
+                .target(
+                    name: "Libplacebo",
+                    url: "https://github.com/mpvkit/libplacebo-build/releases/download/\(BaseBuild.options.releaseVersion)/Libplacebo.xcframework.zip",
+                    checksum: "https://github.com/mpvkit/libplacebo-build/releases/download/\(BaseBuild.options.releaseVersion)/Libplacebo.xcframework.checksum.txt"
+                ),
+            ]
+        default:
+            return []
+        }
+    }
 }
 
 

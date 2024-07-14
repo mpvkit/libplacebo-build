@@ -24,24 +24,19 @@ jobs:
         brew install meson
         brew install ninja
 
+    - name: Setup Xcode to support visionOS
+      run: |
+        sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+        xcodebuild -showsdks
+
     - name: Build
       run: |
-        make build
+        make build version=${{ github.event.inputs.version }}
     
     - name: Update Package.swift
       run: |
-        rm -f ./Package.swift
-        cp -f ./docs/Package.template.swift ./Package.swift
-
-        Libplacebo_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/Libplacebo.xcframework.zip"
-        Libplacebo_checksum=$(cat ./dist/release/Libplacebo.xcframework.checksum.txt)
-        sed -i '' "s#\\\(Libplacebo_url)#${Libplacebo_url}#g" ./Package.swift
-        sed -i '' "s#\\\(Libplacebo_checksum)#${Libplacebo_checksum}#g" ./Package.swift
-
-        lcms2_url="https://github.com/mpvkit/libplacebo-build/releases/download/${{ github.event.inputs.version }}/lcms2.xcframework.zip"
-        lcms2_checksum=$(cat ./dist/release/lcms2.xcframework.checksum.txt)
-        sed -i '' "s#\\\(lcms2_url)#${lcms2_url}#g" ./Package.swift
-        sed -i '' "s#\\\(lcms2_checksum)#${lcms2_checksum}#g" ./Package.swift
+        rm -rf ./Package.swift
+        cp -f ./dist/release/Package.swift ./Package.swift
 
     - name: Push Package.swift
       uses: EndBug/add-and-commit@v9
@@ -49,7 +44,7 @@ jobs:
         default_author: github_actions
         add: |
           - Package.swift
-        message: "chore: release version ${{ github.event.inputs.version }}"
+        message: "chore: bump version to ${{ github.event.inputs.version }}"
         push: "origin HEAD:${{ github.ref_name }}"
         
     - name: Upload binary to GitHub Release
@@ -60,5 +55,5 @@ jobs:
         files: |
           ./dist/release/*.txt
           ./dist/release/*.zip
-        prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        prerelease: ${{ contains(github.event.inputs.version, 'alpha') || contains(github.event.inputs.version, 'beta') }}
         fail_on_unmatched_files: true
