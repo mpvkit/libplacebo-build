@@ -19,4 +19,5 @@ build:
 clean:
 	@find . -name '.build' -type d -exec rm -rf {} +
 	@find . -name '.swiftpm' -type d -exec rm -rf {} +
+	@rm -rf ./dist
 	@rm -rf ./*.log
