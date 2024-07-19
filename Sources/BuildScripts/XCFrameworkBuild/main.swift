@@ -108,6 +108,12 @@ enum Library: String, CaseIterable {
 private class BuildPlacebo: BaseBuild {
     init() {
         super.init(library: .libplacebo)
+
+    }
+
+    override func beforeBuild() throws {
+        try super.beforeBuild()
+
         
         // // switch to master branch, to pull newest code
         // try! Utility.launch(path: "/usr/bin/git", arguments: ["remote", "set-branches", "--add", "origin", "master"], currentDirectoryURL: directoryURL)
@@ -117,6 +123,7 @@ private class BuildPlacebo: BaseBuild {
         // pull all submodules
         Utility.shell("git submodule update --init --recursive", currentDirectoryURL: directoryURL)
     }
+
 
     override func arguments(platform: PlatformType, arch: ArchType) -> [String] {
         var args = [
@@ -222,6 +229,7 @@ private class BuildVulkan: ZipBaseBuild {
     }
 
     override func buildALL() throws {
+        try self.beforeBuild()
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
         try? FileManager.default.removeItem(at: directoryURL.appendingPathExtension("log"))
         try? FileManager.default.createDirectory(atPath: (URL.currentDirectory + library.rawValue).path, withIntermediateDirectories: true, attributes: nil)
@@ -252,6 +260,6 @@ private class BuildVulkan: ZipBaseBuild {
             }
         }
 
-        try generatePackageManagerFile()
+        try self.afterBuild()
     }
 }
