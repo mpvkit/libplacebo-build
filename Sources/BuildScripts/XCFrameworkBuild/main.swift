@@ -32,7 +32,7 @@ enum Library: String, CaseIterable, BuildLibrary {
         case .spirvcross:  // parsing and converting SPIR-V to other shader languages.
             return "vulkan-sdk-1.4.309.0"
         case .libplacebo:
-            return "v7.360.0"
+            return "v7.360.1"
         }
     }
 
